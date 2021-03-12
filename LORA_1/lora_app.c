@@ -1,26 +1,12 @@
 #include "delay.h"
 #include "usart3.h"
 #include "lora_app.h"
-#include "lora_ui.h"
+
 #include "led.h"
 
 #include "string.h"
 #include "stdio.h"
 
-
-//////////////////////////////////////////////////////////////////////////////////
-//本程序只供学习使用，未经作者许可，不得用于其它任何用途
-//ALIENTEK STM32F103开发板
-//ATK-LORA-01模块功能驱动
-//正点原子@ALIENTEK
-//技术论坛:www.openedv.com
-//创建日期:2016/4/1
-//版本：V1.0
-//版权所有，盗版必究。
-//Copyright(C) 广州市星翼电子科技有限公司 2014-2024
-//All rights reserved
-//********************************************************************************
-//无
 
 //设备参数初始化(具体设备参数见lora_cfg.h定义)
 LoRa_CFG My_LoRa_CFG;
@@ -31,6 +17,11 @@ NVIC_InitTypeDef NVIC_InitStructure;
 
 //设备工作模式(用于记录设备状态)
 u8 Lora_mode = 0; //0:配置模式 1:接收模式 2:发送模式
+
+u8 set_Already = 0; //
+
+
+
 //记录中断状态
 static u8 Int_mode = 0; //0:关闭 1:上升沿 2:下降沿
 
@@ -185,7 +176,8 @@ void LoRa_Set(void)
     lora_addrh = (My_LoRa_CFG.addr >> 8) & 0xff;
     lora_addrl = My_LoRa_CFG.addr & 0xff;
     sprintf((char *)sendbuf, "AT+ADDR=%02x,%02x", lora_addrh, lora_addrl); //设置设备地址
-    if(!lora_send_cmd(sendbuf, (void *)"OK", 50))
+    printf("%s\r\n",sendbuf);
+	if(!lora_send_cmd(sendbuf, (void *)"OK", 50))
 	{
 		printf(" 设置设备地址 success \r\n");
 	}
@@ -249,7 +241,7 @@ void LoRa_SendData(void)
 
     if (My_LoRa_CFG.mode_sta == LORA_STA_Tran) //透明传输
     {
-        sprintf((char *)Tran_Data, "ATK-LORA-01 TEST %d", num);
+        sprintf((char *)Tran_Data, "RELAY %d", num);
         u3_printf("%s\r\n", Tran_Data);
         //LCD_Fill(0, 195, 240, 220, WHITE);         //清除显示
         //Show_Str_Mid(10, 195, Tran_Data, 16, 240); //显示发送的数据

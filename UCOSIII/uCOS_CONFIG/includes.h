@@ -99,7 +99,7 @@
 typedef struct 
 {
 	int device_id;
-	int lora_address;
+	double lora_address;
 	int lora_channel;
 	char temperature[10];
 	char humidity[10];

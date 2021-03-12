@@ -21,6 +21,11 @@
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h" 
 
+#include "malloc.h"
+#include "sdio_sdcard.h"   
+
+
+
 /****************************************************************
 *Ãû    ³Æ:ÊäÆøÕ¾³¡ÆøÌåÐ¹Â©¼ì²âÏµÍ³
 *×÷    Õß:ºÎÎµ
@@ -37,7 +42,7 @@
 
 *ÈÎÎñ£º
 	1.¿ªÊ¼ÈÎÎñ ´´½¨ÐÅºÅÁ¿ ÏûÏ¢¶ÓÁÐ »¥³âËø ÊÂ¼þ±êÖ¾×é ÈÎÎñ
-	2.DHT11ÎÂÊª¶È²É¼¯,µ¥×ÜÏß²É¼¯£¬  	»¥³âËø lcdÏÔÊ¾		Êý¾ÝÍ¨¹ýÏûÏ¢¶ÓÁÐ·¢ËÍÊý¾Ýµ½Ïß³Ì´æ´¢¡¢×ª·¢ÈÎÎñ
+	2.DHT11ÎÂÊª¶È²É¼¯,µ¥×ÜÏß²É¼¯£¬  	»¥³âËø lcdÏ	ÔÊ¾		Êý¾ÝÍ¨¹ýÏûÏ¢¶ÓÁÐ·¢ËÍÊý¾Ýµ½Ïß³Ì´æ´¢¡¢×ª·¢ÈÎÎñ
 	3.TDLASÆøÌåÅ¨¶È²É¼¯£¬´®¿Ú½ÓÊÕÅ¨¶ÈÊý¾Ý£¬»¥³âËø lcdÏÔÊ¾	Êý¾ÝÍ¨¹ýÏûÏ¢¶ÓÁÐ·¢ËÍÊý¾Ýµ½Ïß³Ì´æ´¢¡¢×ª·¢ÈÎÎñ        
 	4.MQ135 Å¨¶È²É¼¯
 	5.MQ4 Å¨¶È²É¼¯
@@ -201,6 +206,7 @@ OS_MUTEX				g_mutex_printf;
 OS_MUTEX				g_mutex_oled;		
 OS_MUTEX				g_mutex_lcd;
 OS_MUTEX				g_mutex_TDLAS;
+OS_MUTEX				g_mutex_LORA;
 OS_MUTEX				g_mutex_DHT11;
 OS_MUTEX				g_mutex_NODE;
 
@@ -233,6 +239,9 @@ uint32_t 				g_oled_display_time_count=0;
 char temp_buf[16] = {0};
 char humi_buf[16] = {0};
 char TDLAS[20] = {0};
+
+char LORA[20] = {0};
+
 char MQ135[20] = {0};
 char MQ4[20] = {0};
 
@@ -244,8 +253,8 @@ NODE node_1;
 void node_init(void)
 {
 	node_1.device_id = 6;
-	node_1.lora_address = My_LoRa_CFG.addr;
-	node_1.lora_channel = My_LoRa_CFG.chn;
+	node_1.lora_address = LORA_ADDR;
+	node_1.lora_channel = LORA_CHN;
 	strcpy(node_1.temperature,"25.0");
 	strcpy(node_1.humidity,"50.0");
 	strcpy(node_1.CH4concentration,"000.0");
@@ -290,6 +299,27 @@ static void NVIC_Usart2_Enable()
     NVIC_Init(&NVIC_InitStructure); 
 }
 
+//Í¨¹ý´®¿Ú´òÓ¡SD¿¨Ïà¹ØÐÅÏ¢
+void show_sdcard_info(void)
+{
+	switch(SDCardInfo.CardType)
+	{
+		case SDIO_STD_CAPACITY_SD_CARD_V1_1:printf("Card Type:SDSC V1.1\r\n");break;
+		case SDIO_STD_CAPACITY_SD_CARD_V2_0:printf("Card Type:SDSC V2.0\r\n");break;
+		case SDIO_HIGH_CAPACITY_SD_CARD:printf("Card Type:SDHC V2.0\r\n");break;
+		case SDIO_MULTIMEDIA_CARD:printf("Card Type:MMC Card\r\n");break;
+	}	
+  	printf("Card ManufacturerID:%d\r\n",SDCardInfo.SD_cid.ManufacturerID);	//ÖÆÔìÉÌID
+ 	printf("Card RCA:%d\r\n",SDCardInfo.RCA);								//¿¨Ïà¶ÔµØÖ·
+	printf("Card Capacity:%d MB\r\n",(u32)(SDCardInfo.CardCapacity>>20));	//ÏÔÊ¾ÈÝÁ¿
+ 	printf("Card BlockSize:%d\r\n\r\n",SDCardInfo.CardBlockSize);			//ÏÔÊ¾¿é´óÐ¡
+}  
+
+
+
+
+
+
 /*******************************************
 		1.Ó²¼þ³õÊ¼»¯
 		2.´®¿Ú³õÊ¼»¯
@@ -300,6 +330,7 @@ int main(void)
 	OS_ERR err;
 	char node_message_1[16] = {0};
 	char node_message_2[16] = {0};
+	u8 lora_addrh, lora_addrl = 0;
 	CPU_SR_ALLOC();
 	
 	node_init();		//node½á¹¹Ìå³õÊ¼»¯
@@ -318,36 +349,61 @@ int main(void)
 		delay_ms(300);
 	}
 	LoRa_Set();				//³õÊ¼»¯ATK-LORA-01Ä£¿é
+	Lora_mode = 0;      //±ê¼Ç"½ÓÊÕÄ£Ê½"
+	set_Already = 1;
+	
 	
 	
 	LED_Init();         //LED³õÊ¼»¯
 	KEY_Init();			//KEY³õÊ¼»¯ 
-	BEEP_Init(); 		//BEEP³õÊ¼»¯
-	
-	while(DHT11_Init())//ÎÂÊª¶È´«¸ÐÆ÷µÄ³õÊ¼»¯
-	{
-		printf("Î´¼ì²âµ½   DHT11   Ä£¿é!!! \r\n");		
-		delay_ms(300);
-	}
-	mq135_init();		//mq135³õÊ¼»¯
-	
+	BEEP_Init(); 		//BEEP³õÊ¼»¯	
 	LCD_Init();			//³õÊ¼»¯LCD 
-	POINT_COLOR=RED;			//ÉèÖÃ×ÖÌåÎªºìÉ« 
-	//Ä£¿éËð»µ
-//	MPU_Init();			//³õÊ¼»¯MPU6050
-//	while(mpu_dmp_init())
+	POINT_COLOR=RED;	//ÉèÖÃ×ÖÌåÎªºìÉ«
+
+//	while(DHT11_Init())//ÎÂÊª¶È´«¸ÐÆ÷µÄ³õÊ¼»¯
 //	{
-//		LCD_ShowString(30,20,200,16,16,"MPU6050 Error");
-//		delay_ms(500);
-//		LCD_Fill(30,130,239,130+16,WHITE);
-//		delay_ms(500);
-//	}  
+//		LCD_ShowString(30,0,200,16,16,"DHT11 Error!");
+//		delay_ms(500);					
+//		LCD_ShowString(30,0,200,16,16,"Please Check! ");
+//		delay_ms(500);	
+//		delay_ms(300);
+//	}
 	
+	while(SD_Init())//¼ì²â²»µ½SD¿¨
+	{
+		LCD_ShowString(30,20,200,16,16,"SD Card Error!");
+		delay_ms(500);					
+		LCD_ShowString(30,20,200,16,16,"Please Check! ");
+		delay_ms(500);
+	}
+	show_sdcard_info();
+	
+	
+#if 0  
+	//ÖÐ¼Ì½Úµã²»²É¼¯´«¸ÐÆ÷Êý¾Ý
+	//±£ÁôDHT11½øÐÐµ÷ÊÔ
+
+	mq135_init();		//mq135³õÊ¼»¯
+
+	//Ä£¿éËð»µ
+	MPU_Init();			//³õÊ¼»¯MPU6050
+	while(mpu_dmp_init())
+	{
+		LCD_ShowString(30,20,200,16,16,"MPU6050 Error");
+		delay_ms(500);
+		LCD_Fill(30,130,239,130+16,WHITE);
+		delay_ms(500);
+	}  
+#endif
+
 	//ÏÔÊ¾Éè±¸ID
-	sprintf(node_message_2,"CHN:%d ADDR:%d",My_LoRa_CFG.chn,My_LoRa_CFG.addr);
+	lora_addrh = (My_LoRa_CFG.addr >> 8) & 0xff;
+    lora_addrl = My_LoRa_CFG.addr & 0xff;
 	sprintf(node_message_1,"Node ID:%d",node_1.device_id);
 	LCD_ShowString(30,50,200,24,24,(u8 *)node_message_1);
-	LCD_ShowString(30,80,200,24,24,(u8 *)node_message_2);
+	//sprintf(node_message_2,"CHN:%d  ADDR=%02x%02x",My_LoRa_CFG.chn,lora_addrh, lora_addrl);
+	sprintf(node_message_2,"CHN:%d  ADDR=%04x",My_LoRa_CFG.chn,My_LoRa_CFG.addr);
+	LCD_ShowString(30,110,250,24,24,(u8 *)node_message_2);
 	
 	//RTC³õÊ¼»¯
 	RTC_Init();
@@ -412,6 +468,8 @@ void start_task(void *p_arg)
 	OSMutexCreate(&g_mutex_printf,	"g_mutex_printf",&err);	
 	OSMutexCreate(&g_mutex_oled,	"g_mutex_oled",&err);
 	OSMutexCreate(&g_mutex_lcd,		"g_mutex_olcd",&err);
+	OSMutexCreate(&g_mutex_LORA,	"g_mutex_lora",&err);
+	
 	
 	//´´½¨ÏûÏ¢¶ÓÁÐ£¬ÓÃÓÚusart2·¢ËÍÖÁTDLAS
 	OSQCreate(&g_queue_usart1,"g_queue_usart1",16,&err);
@@ -774,9 +832,6 @@ void TDLAS_task(void *p_arg)
 		OSMutexPost(&g_mutex_oled,OS_OPT_NONE,&err);
 #endif		
 		
-		
-		
-		
 		//µÈ´ýÏûÏ¢¶ÓÁÐ
 		TDLAS_res = OSQPend((OS_Q*			)&g_queue_usart2,
 							(OS_TICK		)0,
@@ -791,7 +846,7 @@ void TDLAS_task(void *p_arg)
 		}
 		
 		//×ª»»TDLASÊýÖµ£¬²¢ºÏ³ÉÊä³ö×Ö·û´®
-		//OSMutexPend(&g_mutex_TDLAS,0,OS_OPT_PEND_BLOCKING,NULL,&err);
+		OSMutexPend(&g_mutex_TDLAS,0,OS_OPT_PEND_BLOCKING,NULL,&err);
 		if(USART2_RX_STA&0x8000)
 		{                                           
 			int len=USART2_RX_STA&0x3FFF;//µÃµ½´Ë´Î½ÓÊÕÊý¾ÝµÄ³¤¶È
@@ -804,7 +859,7 @@ void TDLAS_task(void *p_arg)
 			//dgb_printf_safe("TDLAS:%s\r\n",TDLAS);
 			USART2_RX_STA = 0;
 		}	
-		//OSMutexPost(&g_mutex_TDLAS,OS_OPT_POST_NONE,&err);
+		OSMutexPost(&g_mutex_TDLAS,OS_OPT_POST_NONE,&err);
 #if 1		
 		//Ò£²âÄ£¿éÐèÒª½ØÈ¡×Ö·û´®
 		//¹âÕÕÇ¿¶È²¿·Ö×ª»»
@@ -853,7 +908,7 @@ void TDLAS_task(void *p_arg)
 	
 	
 		//ÑÓÊ±·¢ÉúÈÎÎñµ÷¶È
-		delay_ms(1000);
+		//delay_ms(1000);
 	}
 }
 	
@@ -937,11 +992,12 @@ void MQ4_task(void *parg)
 		OSMutexPost(&g_mutex_oled,OS_OPT_POST_NONE,&err);
 #endif
 		
+#if 0
 		//ÔÚLCDÉÏÏÔÊ¾
 		OSMutexPend(&g_mutex_lcd,0,OS_OPT_PEND_BLOCKING,NULL,&err);
 		LCD_ShowString(30,270,220,24,24,(u8 *)MQ4);
 		OSMutexPost(&g_mutex_lcd,OS_OPT_NONE,&err);	
-		
+#endif		
 		
 		
 		//ÑÓÊ±·¢ÉúÈÎÎñµ÷¶È
@@ -966,15 +1022,71 @@ void SAVE_task(void *parg)
 void LORA_task(void *p_arg)
 {
 	OS_ERR err; 
+	//ÏûÏ¢¶ÓÁÐ½ÓÊÕ½á¹û
+	
+	char node_num_str[2] = {0};
+	int node_num_int = 0;
+	
+	uint8_t *LORA_res=NULL;
+	OS_MSG_SIZE LORA_size;
 	
 	dgb_printf_safe("LORA task running\r\n");
 
 	int i=0;
 	while(1)
 	{
-//		for(i=0; i<sizeof(node_1);i++) 
-//			USART_SendData(USART1,*((u8*)&node_1+i));
-		delay_ms(1000);
+		
+		//µÈ´ýÏûÏ¢¶ÓÁÐ
+		LORA_res = OSQPend((OS_Q*			)&g_queue_usart3,
+							(OS_TICK		)0,
+							(OS_OPT			)OS_OPT_PEND_BLOCKING,
+							(OS_MSG_SIZE*	)&LORA_size,
+							(CPU_TS*		)NULL,
+							(OS_ERR*		)&err);
+		
+		if(err != OS_ERR_NONE)
+		{
+			dgb_printf_safe("[LORA_task][OSQPend]Error Code = %d\r\n",err);		
+		}
+		
+		//Êý¾Ý½ÓÊÕ
+		OSMutexPend(&g_mutex_LORA,0,OS_OPT_PEND_BLOCKING,NULL,&err);
+		
+		if(USART3_RX_STA&0x8000)
+		{                                           
+			int len=USART3_RX_STA&0x3FFF;//µÃµ½´Ë´Î½ÓÊÕÊý¾ÝµÄ³¤¶È
+			for(i = 0;i < len;i++)
+			{
+				LORA[i] = USART3_RX_BUF[i];
+			}
+			
+			dgb_printf_safe("LORA:%s\r\n",LORA);
+			
+			//Ê¶±ð½Úµã
+			node_num_str[0] =  LORA[4];
+			node_num_str[1] =  LORA[5];
+			node_num_int = atoi(node_num_str);
+			
+			
+			OSMutexPend(&g_mutex_lcd,0,OS_OPT_PEND_BLOCKING,NULL,&err);
+			if(node_num_int == 10)
+			{
+				LCD_ShowString(30,250,300,24,24,LORA);
+			}
+			if(node_num_int == 15)
+			{
+				LCD_ShowString(30,280,300,24,24,LORA);
+			}
+			OSMutexPost(&g_mutex_lcd,OS_OPT_NONE,&err);	
+			
+			USART3_RX_STA = 0;
+		}	
+		
+		OSMutexPost(&g_mutex_LORA,OS_OPT_NONE,&err);
+
+		
+		
+		
 	}
 
 }
@@ -1288,10 +1400,10 @@ void mpu6050_task(void *p_arg)
 	short temp;					//ÎÂ¶È	
 	
 	dgb_printf_safe("MPU6050 task running\r\n");
-	LCD_ShowString(30,300,200,16,16," Temp:    . C");	
- 	LCD_ShowString(30,320,200,16,16,"Pitch:    . C");	
- 	LCD_ShowString(30,340,200,16,16," Roll:    . C");	 
- 	LCD_ShowString(30,360,200,16,16," Yaw :    . C");	
+//	LCD_ShowString(30,300,200,16,16," Temp:    . C");	
+// 	LCD_ShowString(30,320,200,16,16,"Pitch:    . C");	
+// 	LCD_ShowString(30,340,200,16,16," Roll:    . C");	 
+// 	LCD_ShowString(30,360,200,16,16," Yaw :    . C");	
 	while(1)
 	{
 		if(mpu_dmp_get_data(&pitch,&roll,&yaw)==0)
@@ -1401,17 +1513,11 @@ void float_task(void *p_arg)
 	while(1)
 	{
 		float_num+=0.01f;
-		OS_CRITICAL_ENTER();	//½øÈëÁÙ½çÇø
+		
 		dgb_printf_safe("float_numµÄÖµÎª: %.4f\r\n",float_num);
-		OS_CRITICAL_EXIT();		//ÍË³öÁÙ½çÇø
-		
-			
-		sprintf(node_message,"CHN:%d ADDR:%d",My_LoRa_CFG.chn,My_LoRa_CFG.addr);
-		OSMutexPend(&g_mutex_oled,0,OS_OPT_PEND_BLOCKING,NULL,&err);
-		OLED_Clear();
-		OLED_ShowString(0,0,(uint8_t *)node_message,16);
-		OSMutexPost(&g_mutex_oled,OS_OPT_NONE,&err);
-		
+
+		LoRa_SendData();
+				
 		delay_ms(6000);			//ÑÓÊ±500ms
 		
 	}

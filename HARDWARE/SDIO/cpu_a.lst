@@ -462,11 +462,11 @@ ARM Macro Assembler    Page 8
   289 00000034         
   290 00000034                 END
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M3 --apcs=interw
-ork --depend=..\obj\cpu_a.d -o..\obj\cpu_a.o -IC:\Users\HEWEI\Desktop\毕业设计\
-程序开发\软件设计\GasDectionSystem-Part03\USER\RTE -ID:\KEIL5\ARM\PACK\Keil\STM
-32F1xx_DFP\1.0.5\Device\Include -ID:\KEIL5\ARM\CMSIS\Include --predefine="__UVI
-SION_VERSION SETA 514" --predefine="STM32F10X_HD SETA 1" --list=.\cpu_a.lst ..\
-UCOSIII\uC-CPU\ARM-Cortex-M3\RealView\cpu_a.asm
+ork --depend=..\obj\cpu_a.d -o..\obj\cpu_a.o -IC:\Users\10038\Desktop\Gas_detec
+tion\USER\RTE -ID:\MDK5\ARM\PACK\Keil\STM32F1xx_DFP\1.0.5\Device\Include -ID:\M
+DK5\ARM\CMSIS\Include --predefine="__UVISION_VERSION SETA 514" --predefine="STM
+32F10X_HD SETA 1" --list=..\hardware\sdio\cpu_a.lst ..\UCOSIII\uC-CPU\ARM-Corte
+x-M3\RealView\cpu_a.asm
 
 
 
