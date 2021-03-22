@@ -166,7 +166,11 @@ void *myrealloc(u8 memx,void *ptr,u32 size)
     }  
 }
 
-
+//__use_no_semihosting was requested, but _ttywrch was 
+void _ttywrch(int ch)
+{
+    ch = ch;
+}
 
 
 

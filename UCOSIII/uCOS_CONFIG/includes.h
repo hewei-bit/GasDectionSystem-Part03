@@ -95,16 +95,7 @@
 #define CORE_OBJ_NUM	2				//内核对象个数，一共3个：2个信号量和一个消息队列						
 
 
-//节点结构体
-typedef struct 
-{
-	int device_id;
-	double lora_address;
-	int lora_channel;
-	char temperature[10];
-	char humidity[10];
-	char CH4concentration[10];
-} NODE;
+
 
 
 extern OS_FLAG_GRP			g_flag_grp;		

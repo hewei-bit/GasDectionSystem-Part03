@@ -81,6 +81,7 @@ void USART3_IRQHandler(void)
 	{
 		if (USART_GetITStatus(USART3, USART_IT_RXNE) != RESET) //接收中断(接收到的数据必须是0x0d 0x0a结尾)
 		{
+			USART_ClearITPendingBit(USART3,USART_IT_RXNE);
 			Res = USART_ReceiveData(USART3); //读取接收到的数据
 
 			if ((USART3_RX_STA & 0x8000) == 0) //接收未完成
@@ -107,21 +108,16 @@ void USART3_IRQHandler(void)
 			}
 		}		
 	}
-	
-#if 0	
-
-#endif	
+	if(USART_GetFlagStatus(USART3,USART_FLAG_ORE) == SET) // 检查 ORE 标志
+	{
+		USART_ClearITPendingBit(USART3,USART_FLAG_ORE);
+		USART_ReceiveData(USART3);
+	}	 
 	
 #if 1//发送消息队列
 	if (USART3_RX_STA & 0x8000)
     {
         len = USART3_RX_STA & 0x3FFF; //得到此次接收数据的长度
-//		for(i=0;i<len;i++)
-//		{
-//			while(USART_GetFlagStatus(USART1,USART_FLAG_TC)==RESET); //循环发送,直到发送完毕   
-//			USART_SendData(USART1,USART3_RX_BUF[i]); 
-//		}
-
         OSQPost((OS_Q *)&g_queue_usart3,
                 (void *)USART3_RX_BUF,
                 (OS_MSG_SIZE)len,

@@ -46,6 +46,9 @@ void usart2_init(u32 bound)
 
     //USART 初始化设置
 
+
+
+
     USART_InitStructure.USART_BaudRate = bound;                                     //串口波特率
     USART_InitStructure.USART_WordLength = USART_WordLength_8b;                     //字长为8位数据格式
     USART_InitStructure.USART_StopBits = USART_StopBits_1;                          //一个停止位
@@ -55,6 +58,7 @@ void usart2_init(u32 bound)
 
     USART_Init(USART2, &USART_InitStructure);      //初始化串口2
     USART_ITConfig(USART2, USART_IT_RXNE, ENABLE); //开启串口接受中断
+	USART_ITConfig(USART2, USART_IT_ORE, ENABLE);	
     USART_Cmd(USART2, ENABLE);                     //使能串口2
 }
 
@@ -63,7 +67,7 @@ void USART2_IRQHandler(void) //串口2中断服务程序
 {
     u8 Res;
     OS_ERR err;
-
+uint8_t ucTemp;
     int len = 0;
     int t = 0;
 
@@ -75,7 +79,6 @@ void USART2_IRQHandler(void) //串口2中断服务程序
     if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) //接收中断(接收到的数据必须是0x0d 0x0a结尾)
     {
         Res = USART_ReceiveData(USART2); //读取接收到的数据
-
         if ((USART2_RX_STA & 0x8000) == 0) //接收未完成
         {
             if (USART2_RX_STA & 0x4000) //接收到了0x0d
@@ -98,8 +101,16 @@ void USART2_IRQHandler(void) //串口2中断服务程序
                 }
             }
         }
+		USART_ClearITPendingBit(USART2,USART_IT_RXNE); // 清除中断标志
+		ucTemp=USART_ReceiveData(USART2);
     }
 
+
+	if(USART_GetFlagStatus(USART2,USART_FLAG_ORE) == SET) // 检查 ORE 标志
+	{
+		USART_ClearFlag(USART2,USART_FLAG_ORE);
+		USART_ReceiveData(USART2);
+	}
 #if 1 //发送消息队列
     if (USART2_RX_STA & 0x8000)
     {     
@@ -116,6 +127,10 @@ void USART2_IRQHandler(void) //串口2中断服务程序
         }	
     }
 #endif
+	
+	
+
+
 	
 #ifdef SYSTEM_SUPPORT_OS
     OSIntExit();

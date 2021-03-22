@@ -130,13 +130,16 @@ void uart_init(u32 bound){
 }
 
 void USART1_IRQHandler(void)                	//串口1中断服务程序
-	{
+{
 	u8 Res;
+	OS_ERR err;
+	int len = 0;
 #ifdef SYSTEM_SUPPORT_OS	 	
 	OSIntEnter();    
 #endif
 	if(USART_GetITStatus(USART1, USART_IT_RXNE) != RESET)  //接收中断(接收到的数据必须是0x0d 0x0a结尾)
-		{
+	{
+		USART_ClearITPendingBit(USART1,USART_IT_RXNE);
 		Res =USART_ReceiveData(USART1);//(USART1->DR);	//读取接收到的数据
 		
 		if((USART_RX_STA&0x8000)==0)//接收未完成
@@ -158,6 +161,31 @@ void USART1_IRQHandler(void)                	//串口1中断服务程序
 				}
 			}   		 
      } 
+		
+	if(USART_GetFlagStatus(USART1,USART_FLAG_ORE) == SET) // 检查 ORE 标志
+	{
+		USART_ClearITPendingBit(USART1,USART_FLAG_ORE);
+		USART_ReceiveData(USART1);
+	}	 
+	 
+		
+#if 1//发送消息队列
+	if (USART_RX_STA & 0x8000)
+    {
+        len = USART_RX_STA & 0x3FFF; //得到此次接收数据的长度
+        OSQPost((OS_Q *)&g_queue_usart1,
+                (void *)USART_RX_BUF,
+                (OS_MSG_SIZE)len,
+                (OS_OPT)OS_OPT_POST_FIFO,
+                (OS_ERR *)&err);
+        if (err != OS_ERR_NONE)
+        {
+            dgb_printf_safe("[USART_IRQHandler]OSQPost error code %d\r\n", err);
+        }
+	}
+#endif		 
+	 
+
 #ifdef SYSTEM_SUPPORT_OS	 
 	OSIntExit();  											 
 #endif

@@ -17,12 +17,21 @@
 #include "key.h"
 #include "rtc.h"
 #include "lcd.h"
+//MPU6050
 #include "mpu6050.h"
 #include "inv_mpu.h"
 #include "inv_mpu_dmp_motion_driver.h" 
-
-#include "malloc.h"
+//SD¿¨ºÍÎÄ¼şÏµÍ³
 #include "sdio_sdcard.h"   
+#include "w25qxx.h"    
+#include "ff.h"  
+#include "exfuns.h" 
+#include "malloc.h"
+#include "text.h"	
+#include "malloc.h"
+//JSON
+#include "cjson.h"
+#include "cJson_test.h"
 
 
 
@@ -34,19 +43,20 @@
 *µ±Ç°ÈÕÆÚ:2020/12/24 Íê³ÉV2.0
 *µ±Ç°ÈÕÆÚ:2021/01/08 Íê³ÉV3.0
 *µ±Ç°ÈÕÆÚ:2021/03/09 Íê³ÉV4.0
-*µ±Ç°ÈÕÆÚ:2021/03/10 Íê³É¶¨µã¼ì²â½Úµã´úÂë
-*µ±Ç°ÈÕÆÚ:2021/03/11 Íê³ÉÒ£²â¼ì²â½Úµã´úÂë
-*µ±Ç°ÈÕÆÚ:2021/03/12 Íê³ÉÖĞ¼Ì½Úµã´úÂë
+*µ±Ç°ÈÕÆÚ:2021/03/14 Íê³ÉV5.0
+*µ±Ç°ÈÕÆÚ:2021/03/14 Íê³É¶¨µã¼ì²â½Úµã´úÂë
+*µ±Ç°ÈÕÆÚ:2021/03/15 Íê³ÉÒ£²â¼ì²â½Úµã´úÂë
+*µ±Ç°ÈÕÆÚ:2021/03/16 Íê³ÉÖĞ¼Ì½Úµã´úÂë
 
 
 
 *ÈÎÎñ£º
 	1.¿ªÊ¼ÈÎÎñ ´´½¨ĞÅºÅÁ¿ ÏûÏ¢¶ÓÁĞ »¥³âËø ÊÂ¼ş±êÖ¾×é ÈÎÎñ
-	2.DHT11ÎÂÊª¶È²É¼¯,µ¥×ÜÏß²É¼¯£¬  	»¥³âËø lcdÏ	ÔÊ¾		Êı¾İÍ¨¹ıÏûÏ¢¶ÓÁĞ·¢ËÍÊı¾İµ½Ïß³Ì´æ´¢¡¢×ª·¢ÈÎÎñ
-	3.TDLASÆøÌåÅ¨¶È²É¼¯£¬´®¿Ú½ÓÊÕÅ¨¶ÈÊı¾İ£¬»¥³âËø lcdÏÔÊ¾	Êı¾İÍ¨¹ıÏûÏ¢¶ÓÁĞ·¢ËÍÊı¾İµ½Ïß³Ì´æ´¢¡¢×ª·¢ÈÎÎñ        
-	4.MQ135 Å¨¶È²É¼¯
-	5.MQ4 Å¨¶È²É¼¯
-	6.¿´ÃÅ¹·
+	2.DHT11ÎÂÊª¶È²É¼¯,µ¥×ÜÏß²É¼¯£¬  	»¥³âËø lcd		Êı¾İÍ¨¹ıÏûÏ¢¶ÓÁĞ·¢ËÍÊı¾İµ½Ïß³Ì´æ´¢¡¢×ª·¢ÈÎÎñ
+	(¸Ã½Úµã²»Ê¹ÓÃ)3.TDLASÆøÌåÅ¨¶È²É¼¯£¬´®¿Ú½ÓÊÕÅ¨¶ÈÊı¾İ£¬»¥³âËø lcdÏÔÊ¾	Êı¾İÍ¨¹ıÏûÏ¢¶ÓÁĞ·¢ËÍÊı¾İµ½Ïß³Ì´æ´¢¡¢×ª·¢ÈÎÎñ        
+	(¸Ã½Úµã²»Ê¹ÓÃ)4.MQ135 Å¨¶È²É¼¯
+	(¸Ã½Úµã²»Ê¹ÓÃ)5.MQ4 Å¨¶È²É¼¯
+	(¸Ã½Úµã²»Ê¹ÓÃ)6.¿´ÃÅ¹·
 	7.±¾µØ´æ´¢ÈÎÎñ µÈ´ı¶à¸öÄÚºË¶ÔÏó ÏûÏ¢¶ÓÁĞ½ÓÊÕÊı¾İ ÒÔtxt¸ñÊ½´æÈëSD¿¨
 	8.LORA×ª·¢ µÈ´ı¶à¸öÄÚºË¶ÔÏó ÏûÏ¢¶ÓÁĞ½ÓÊÕÊı¾İ usart3 ·¢ËÍÖÁÉÏÎ»»ú
 	9.RTCÊ±¼äÏÔÊ¾ »¥³âËø oledÏÔÊ¾	
@@ -54,9 +64,10 @@
 	11.LED1 ÏµÍ³ÔËĞĞÌáÊ¾
 	12.BEEP ĞÅºÅÁ¿½ÓÊÜÊı¾İ ±¨¾¯
 	13.KEY 
-	14.ÈÎÎñ×´Ì¬
-	15.ÏµÍ³ÔËĞĞ¼ì²é
-	16.mpu6050 ÁùÖá´«¸ĞÆ÷ ÏÔÊ¾µ±Ç°ÔÆÌ¨½Ç¶ÈÊı¾İ 
+	(¸Ã½Úµã²»Ê¹ÓÃ)14.mpu6050 ÁùÖá´«¸ĞÆ÷ ÏÔÊ¾µ±Ç°ÔÆÌ¨½Ç¶ÈÊı¾İ 
+	15.ÈÎÎñ×´Ì¬
+	16.ÏµÍ³ÔËĞĞ¼ì²é
+	17.µÈ´ıÉÏÎ»»ú·¢ËÍÉÏ´«ÃüÁî£¬ÂÖÑ¯×éÍø½ÚµãÉÏ´«ÖÁÉÏÎ»»ú
 	
 *Ëµ  Ã÷:		
 	µ±Ç°´úÂë¾¡¿ÉÄÜÊµÏÖÁËÄ£¿é»¯±à³Ì£¬Ò»¸öÈÎÎñ¹ÜÀíÒ»¸öÓ²¼ş¡£×î¼òµ¥µÄ
@@ -67,6 +78,8 @@
 //V2.0 Íê³ÉlcdÏÔÊ¾ ´®¿ÚÏìÓ¦  LORAÈÎÎñÖĞdht11ºÍTDLASµÄÏûÏ¢¶ÓÁĞ´«Êä
 //V3.0 Íê³ÉÉÏÎ»»ú¶ÔÏÂÎ»»úµÄÊı¾İÎÊÑ¯
 //V4.0 Íê³ÉloraĞÅÏ¢´«Êä 
+//V5.0 ÏµÍ³×éÍø
+
 
 /*****************************¶¨ÒåÈÎÎñ¶ÑÕ»*************************************/
 //UCOSIIIÖĞÒÔÏÂÓÅÏÈ¼¶ÓÃ»§³ÌĞò²»ÄÜÊ¹ÓÃ£¬ALIENTEK
@@ -177,7 +190,6 @@ __align(8) CPU_STK	MPU6050_TASK_STK[MPU6050_STK_SIZE];
 void mpu6050_task(void *p_arg);
 
 
-
 //ÈÎÎñ15.ÈÎÎñ×´Ì¬
 #define TASK_STA_TASK_PRIO		20
 #define TASK_STA_STK_SIZE		128
@@ -193,6 +205,14 @@ OS_TCB	FloatTaskTCB;
 __align(8) CPU_STK	FLOAT_TASK_STK[FLOAT_STK_SIZE];
 void float_task(void *p_arg);
 
+//ÈÎÎñ17 µÈ´ıÉÏÎ»»ú·¢ËÍÉÏ´«ÃüÁî£¬
+//ÂÖÑ¯×éÍø½ÚµãÉÏ´«ÖÁÉÏÎ»»ú
+#define UPLOAD_TASK_PRIO		21
+#define UPLOAD_STK_SIZE		128
+OS_TCB	UPLOADTaskTCB;
+__align(8) CPU_STK	UPLOAD_TASK_STK[UPLOAD_STK_SIZE];
+void upload_task(void *p_arg);
+
 
 /*****************************ÊÂ¼ş±êÖ¾×éµÄ¶ÔÏó******************************/
 OS_FLAG_GRP				g_flag_grp;			
@@ -205,9 +225,7 @@ OS_SEM					g_sem_beep;
 OS_MUTEX				g_mutex_printf;	
 OS_MUTEX				g_mutex_oled;		
 OS_MUTEX				g_mutex_lcd;
-OS_MUTEX				g_mutex_TDLAS;
-OS_MUTEX				g_mutex_LORA;
-OS_MUTEX				g_mutex_DHT11;
+
 OS_MUTEX				g_mutex_NODE;
 
 /*****************************ÏûÏ¢¶ÓÁĞµÄ¶ÔÏó*******************************/
@@ -235,30 +253,48 @@ uint32_t 				g_oled_display_flag=1;
 uint32_t 				g_oled_display_time_count=0;
 
 
-//´æ·ÅDHT11ºÍtdlas´«¸ĞÆ÷Êı¾İ
-char temp_buf[16] = {0};
-char humi_buf[16] = {0};
-char TDLAS[20] = {0};
-
-char LORA[20] = {0};
-
-char MQ135[20] = {0};
-char MQ4[20] = {0};
-
-extern __IO u16 MQ135_ADC_ConvertedValue;
+extern __IO int MQ135_ADC_ConvertedValue;
 
 //ĞŞ¸Ä½Úµã½á¹¹Ìå
+//½Úµã½á¹¹Ìå
+typedef struct 
+{
+	char device_id[4];
+	char lora_address[4];
+	char lora_channel[4];
+	char temperature[8];
+	char humidity[8];
+	char CH4concentration[8];
+	char Pitch[8];
+	char Roll[8];
+	char Yaw[8];
+	char light[4];
+	char warning[4];
+	char over[4];
+} NODE;
+
+//¸÷½ÚµãÈ«¾Ö±äÁ¿
+NODE node_temp;
 NODE node_1;
+NODE node_2;
+NODE node_3;
+NODE node_4;
+NODE node_5;
+NODE node_6;
+
+
 //½Úµã³õÊ¼»¯
 void node_init(void)
 {
-	node_1.device_id = 6;
-	node_1.lora_address = LORA_ADDR;
-	node_1.lora_channel = LORA_CHN;
-	strcpy(node_1.temperature,"25.0");
-	strcpy(node_1.humidity,"50.0");
-	strcpy(node_1.CH4concentration,"000.0");
+	strcpy(node_6.device_id,"6");
+	sprintf(node_6.lora_address,"%d", My_LoRa_CFG.addr);
+	sprintf(node_6.lora_channel,"%d", My_LoRa_CFG.chn);
+	strcpy(node_6.temperature,"25.0");
+	strcpy(node_6.temperature,"25.0");
+	strcpy(node_6.CH4concentration,"000.00");
+	strcpy(node_6.over,"\r\n");
 }
+
 
 //»¥³â·ÃÎÊusart1
 #define DEBUG_PRINTF_EN	1
@@ -279,7 +315,8 @@ void dgb_printf_safe(const char *format, ...)
 	(void)0;
 #endif
 }
-//¹Ø±Õ£¬´ò¿ªÖĞ¶Ï
+
+//¹Ø±Õ£¬´ò¿ªUSART2ÖĞ¶Ï
 static void NVIC_Usart2_Disable()
 {
 	NVIC_InitTypeDef NVIC_InitStructure;
@@ -299,6 +336,7 @@ static void NVIC_Usart2_Enable()
     NVIC_Init(&NVIC_InitStructure); 
 }
 
+
 //Í¨¹ı´®¿Ú´òÓ¡SD¿¨Ïà¹ØĞÅÏ¢
 void show_sdcard_info(void)
 {
@@ -316,9 +354,65 @@ void show_sdcard_info(void)
 }  
 
 
+//json°ü×°Êı¾İ
+void json_test(NODE* node)
+{
+	/* Build the JSON array [[1, 2], {"cool": true}] */
+	/* print the version */
+	cJSON *root = NULL;
+	cJSON *fmt = NULL;
+	cJSON *Node = NULL;
 
+	//printf("Version: %s\n", cJSON_Version());
 
+	/* Now some samplecode for building objects concisely: */	
+	root = cJSON_CreateObject();
+	cJSON_AddItemToObject(root,"node 1",Node = cJSON_CreateObject());
+	cJSON_AddStringToObject(Node,"DeviceID",node->device_id);
+	cJSON_AddStringToObject(Node,"LORA_ADD",node->lora_address);
+	cJSON_AddStringToObject(Node,"LORA_CHN",node->lora_channel);
+	cJSON_AddStringToObject(Node, "Temp", node->temperature);
+	cJSON_AddStringToObject(Node, "humi", node->humidity);
+	cJSON_AddStringToObject(Node, "CH4_concentration", node->CH4concentration);
 
+	/* Print to text */
+	if (print_preallocated(root) != 0) {
+		cJSON_Delete(root);
+		return ;
+	}
+	cJSON_Delete(root);		
+}
+
+void json_test_1(NODE* node)
+{
+	/* Build the JSON array [[1, 2], {"cool": true}] */
+	/* print the version */
+	cJSON *root = NULL;
+	cJSON *fmt = NULL;
+	cJSON *Node = NULL;
+
+	//printf("Version: %s\n", cJSON_Version());
+
+	/* Now some samplecode for building objects concisely: */	
+	root = cJSON_CreateObject();
+	cJSON_AddItemToObject(root,"node 1",Node = cJSON_CreateObject());
+	cJSON_AddStringToObject(Node,"DeviceID",node->device_id);
+	cJSON_AddStringToObject(Node,"LORA_ADD",node->lora_address);
+	cJSON_AddStringToObject(Node,"LORA_CHN",node->lora_channel);
+	cJSON_AddStringToObject(Node, "Temp", node->temperature);
+	cJSON_AddStringToObject(Node, "humi", node->humidity);
+	cJSON_AddStringToObject(Node, "light", node->light);
+	cJSON_AddStringToObject(Node, "CH4_concentration", node->CH4concentration);
+	cJSON_AddStringToObject(Node, "Pitch", node->Pitch);
+	cJSON_AddStringToObject(Node, "Roll", node->Roll);
+	cJSON_AddStringToObject(Node, "Yaw", node->Yaw);
+	/* Print to text */
+	if (print_preallocated(root) != 0) {
+		cJSON_Delete(root);
+		return ;
+	}
+	cJSON_Delete(root);		
+}
 
 /*******************************************
 		1.Ó²¼ş³õÊ¼»¯
@@ -340,7 +434,6 @@ int main(void)
 	
 	uart_init(115200);    	//´®¿Ú²¨ÌØÂÊÉèÖÃ
 	usart2_init(115200);    //´®¿Ú²¨ÌØÂÊÉèÖÃ
-	NVIC_Usart2_Disable();
 	uart4_init(115200);    	//´®¿Ú²¨ÌØÂÊÉèÖÃ
 
 	while(LoRa_Init())		//³õÊ¼»¯ATK-LORA-01Ä£¿é
@@ -352,32 +445,38 @@ int main(void)
 	Lora_mode = 0;      //±ê¼Ç"½ÓÊÕÄ£Ê½"
 	set_Already = 1;
 	
-	
-	
 	LED_Init();         //LED³õÊ¼»¯
 	KEY_Init();			//KEY³õÊ¼»¯ 
 	BEEP_Init(); 		//BEEP³õÊ¼»¯	
 	LCD_Init();			//³õÊ¼»¯LCD 
 	POINT_COLOR=RED;	//ÉèÖÃ×ÖÌåÎªºìÉ«
 
-//	while(DHT11_Init())//ÎÂÊª¶È´«¸ĞÆ÷µÄ³õÊ¼»¯
-//	{
-//		LCD_ShowString(30,0,200,16,16,"DHT11 Error!");
-//		delay_ms(500);					
-//		LCD_ShowString(30,0,200,16,16,"Please Check! ");
-//		delay_ms(500);	
-//		delay_ms(300);
-//	}
-	
-	while(SD_Init())//¼ì²â²»µ½SD¿¨
+	while(DHT11_Init())//ÎÂÊª¶È´«¸ĞÆ÷µÄ³õÊ¼»¯
 	{
-		LCD_ShowString(30,20,200,16,16,"SD Card Error!");
+		LCD_ShowString(30,0,200,16,16,"DHT11 Error!");
 		delay_ms(500);					
-		LCD_ShowString(30,20,200,16,16,"Please Check! ");
+		LCD_ShowString(30,0,200,16,16,"Please Check! ");
+		delay_ms(500);	
+		delay_ms(300);
+	}
+	
+
+	
+	W25QXX_Init();		//³õÊ¼»¯W25Q128		
+	my_mem_init(SRAMIN);//³õÊ¼»¯ÄÚ²¿ÄÚ´æ³Ø
+	while(SD_Init())	//¼ì²âSD¿¨
+	{
+		LCD_ShowString(30,10,200,16,16,(u8 *)"SD Card Error!");
+		delay_ms(500);					
+		LCD_ShowString(30,10,200,16,16,(u8 *)"Please Check! ");
 		delay_ms(500);
 	}
-	show_sdcard_info();
+	exfuns_init();		//ÎªfatfsÏà¹Ø±äÁ¿ÉêÇëÄÚ´æ
+	f_mount(fs[0],"0:",1);			//¹ÒÔØSD¿¨
+	f_mount(fs[1],"1:",1); 			//¹ÒÔØFLASH.	
 	
+
+	show_sdcard_info();	
 	
 #if 0  
 	//ÖĞ¼Ì½Úµã²»²É¼¯´«¸ĞÆ÷Êı¾İ
@@ -399,19 +498,14 @@ int main(void)
 	//ÏÔÊ¾Éè±¸ID
 	lora_addrh = (My_LoRa_CFG.addr >> 8) & 0xff;
     lora_addrl = My_LoRa_CFG.addr & 0xff;
-	sprintf(node_message_1,"Node ID:%d",node_1.device_id);
-	LCD_ShowString(30,50,200,24,24,(u8 *)node_message_1);
+	sprintf(node_message_1,"Node ID:6");
+	LCD_ShowString(30,80,200,24,24,(u8 *)node_message_1);
 	//sprintf(node_message_2,"CHN:%d  ADDR=%02x%02x",My_LoRa_CFG.chn,lora_addrh, lora_addrl);
 	sprintf(node_message_2,"CHN:%d  ADDR=%04x",My_LoRa_CFG.chn,My_LoRa_CFG.addr);
 	LCD_ShowString(30,110,250,24,24,(u8 *)node_message_2);
 	
 	//RTC³õÊ¼»¯
 	RTC_Init();
-
-	//ÆäÓàÓ²¼ş³õÊ¼»¯Íê³É£¬
-	NVIC_Usart2_Enable();
-
-
 
 	OSInit(&err);		//³õÊ¼»¯UCOSIII
 	OS_CRITICAL_ENTER();//½øÈëÁÙ½çÇø
@@ -468,7 +562,8 @@ void start_task(void *p_arg)
 	OSMutexCreate(&g_mutex_printf,	"g_mutex_printf",&err);	
 	OSMutexCreate(&g_mutex_oled,	"g_mutex_oled",&err);
 	OSMutexCreate(&g_mutex_lcd,		"g_mutex_olcd",&err);
-	OSMutexCreate(&g_mutex_LORA,	"g_mutex_lora",&err);
+	
+	OSMutexCreate(&g_mutex_NODE,		"g_mutex_NODE",&err);
 	
 	
 	//´´½¨ÏûÏ¢¶ÓÁĞ£¬ÓÃÓÚusart2·¢ËÍÖÁTDLAS
@@ -492,8 +587,6 @@ void start_task(void *p_arg)
 	OSQCreate(&g_queue_MQ4_to_txt,"g_queue_MQ4_to_txt",16,&err);
 	
 	dgb_printf_safe("start_task task running\r\n");
-	
-	
 	
 	//2.´´½¨DHT11ÈÎÎñ
 	OSTaskCreate((OS_TCB 	* )&DHT11_Task_TCB,		
@@ -704,7 +797,23 @@ void start_task(void *p_arg)
                  (void   	* )0,				
                  (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR, 
                  (OS_ERR 	* )&err);	
+	
+	//17.´´½¨ÉÏ´«ÈÎÎñ
+	OSTaskCreate((OS_TCB 	* )&UPLOADTaskTCB,		
+				 (CPU_CHAR	* )"upload_task", 		
+                 (OS_TASK_PTR )upload_task, 			
+                 (void		* )0,					
+                 (OS_PRIO	  )UPLOAD_TASK_PRIO,     	
+                 (CPU_STK   * )&UPLOAD_TASK_STK[0],	
+                 (CPU_STK_SIZE)UPLOAD_STK_SIZE/10,	
+                 (CPU_STK_SIZE)UPLOAD_STK_SIZE,		
+                 (OS_MSG_QTY  )0,					
+                 (OS_TICK	  )0,					
+                 (void   	* )0,				
+                 (OS_OPT      )OS_OPT_TASK_STK_CHK|OS_OPT_TASK_STK_CLR, 
+                 (OS_ERR 	* )&err);					 
 				 
+
 	OS_TaskSuspend((OS_TCB*)&StartTaskTCB,&err);		//¹ÒÆğ¿ªÊ¼ÈÎÎñ			 
 	OS_CRITICAL_EXIT();	//½øÈëÁÙ½çÇø
 }
@@ -737,10 +846,10 @@ void DHT11_task(void *p_arg)
 		sprintf((char *)humi_buf,"Humi:%02d.%d%%",dht11_data[0],dht11_data[1]);
 		
 		//¸³Öµ½á¹¹Ìå
-		OSMutexPend(&g_mutex_DHT11,0,OS_OPT_PEND_BLOCKING,NULL,&err);	
+		OSMutexPend(&g_mutex_NODE,0,OS_OPT_PEND_BLOCKING,NULL,&err);	
 		sprintf((char *)node_1.temperature,"%02d.%d",dht11_data[2],dht11_data[3]);
 		sprintf((char *)node_1.humidity,"%02d.%d",dht11_data[0],dht11_data[1]);
-		OSMutexPost(&g_mutex_DHT11,OS_OPT_POST_NONE,&err);
+		OSMutexPost(&g_mutex_NODE,OS_OPT_POST_NONE,&err);
 		
 		//LCDÏÔÊ¾
 		OSMutexPend(&g_mutex_lcd,0,OS_OPT_PEND_BLOCKING,NULL,&err);
@@ -783,6 +892,11 @@ void TDLAS_task(void *p_arg)
 	int i = 0;
 	int flag = 0;
 	
+	//ÏûÏ¢¶ÓÁĞ½ÓÊÕ½á¹û
+	uint8_t *TDLAS_res=NULL;
+	OS_MSG_SIZE TDLAS_size;
+	char TDLAS[20] = {0};
+	
 	//¶¨µãÄ£¿éÅ¨¶È
 	int concen = 0;
 	
@@ -791,47 +905,15 @@ void TDLAS_task(void *p_arg)
 	char gq_str[2] = {0};
 	int nd_val = 0;
 	char nd_str[5] = {0};
-	
-	//ÏûÏ¢¶ÓÁĞ½ÓÊÕ½á¹û
-	uint8_t *TDLAS_res=NULL;
-	OS_MSG_SIZE TDLAS_size;
-	
 	//×îÖÕÊä³ö
 	char Fix_result[20] = {0};
 	char telemetry_result_light[20] = "Light: 00";
 	char telemetry_result_CH4[20] = "CH4(TDLAS): 00000";
 	
-	
 	dgb_printf_safe("TDLAS task running\r\n");
 	
 	while(1)
 	{	
-		
-#if 0
-		//²âÊÔ´úÂë	
-		if(flag){
-			concen += 100;
-		}
-		else{
-			concen -= 100;
-		}
-		
-		if (concen > 500 || concen < 0)
-		{
-			flag = ~flag;
-		}	
-		//¸³ÖµTDLAS
-		OSMutexPend(&g_mutex_TDLAS,0,OS_OPT_PEND_BLOCKING,NULL,&err);	
-			sprintf(TDLAS,"%d",concen);
-		OSMutexPost(&g_mutex_TDLAS,OS_OPT_POST_NONE,&err);
-		
-		//OLEDÏÔÊ¾
-		OSMutexPend(&g_mutex_oled,0,OS_OPT_PEND_BLOCKING,NULL,&err);
-			sprintf(result,"TDLAS: %d ppm",x);
-			OLED_ShowString(0,4,(uint8_t *)result,20);
-		OSMutexPost(&g_mutex_oled,OS_OPT_NONE,&err);
-#endif		
-		
 		//µÈ´ıÏûÏ¢¶ÓÁĞ
 		TDLAS_res = OSQPend((OS_Q*			)&g_queue_usart2,
 							(OS_TICK		)0,
@@ -846,7 +928,6 @@ void TDLAS_task(void *p_arg)
 		}
 		
 		//×ª»»TDLASÊıÖµ£¬²¢ºÏ³ÉÊä³ö×Ö·û´®
-		OSMutexPend(&g_mutex_TDLAS,0,OS_OPT_PEND_BLOCKING,NULL,&err);
 		if(USART2_RX_STA&0x8000)
 		{                                           
 			int len=USART2_RX_STA&0x3FFF;//µÃµ½´Ë´Î½ÓÊÕÊı¾İµÄ³¤¶È
@@ -859,7 +940,6 @@ void TDLAS_task(void *p_arg)
 			//dgb_printf_safe("TDLAS:%s\r\n",TDLAS);
 			USART2_RX_STA = 0;
 		}	
-		OSMutexPost(&g_mutex_TDLAS,OS_OPT_POST_NONE,&err);
 #if 1		
 		//Ò£²âÄ£¿éĞèÒª½ØÈ¡×Ö·û´®
 		//¹âÕÕÇ¿¶È²¿·Ö×ª»»
@@ -893,11 +973,13 @@ void TDLAS_task(void *p_arg)
 #endif
 
 #if 0		
+		OSMutexPend(&g_mutex_NODE,0,OS_OPT_PEND_BLOCKING,NULL,&err);
+		strcpy(node_1.CH4concentration,TDLAS);
+		OSMutexPost(&g_mutex_NODE,OS_OPT_POST_NONE,&err);
+		
 		//¶¨µãÄ£¿éÖ±½Ó×ª»»¼´¿É
-		OSMutexPend(&g_mutex_TDLAS,0,OS_OPT_PEND_BLOCKING,NULL,&err);
 		concen = atoi(TDLAS);
 		sprintf(Fix_result,"TDLAS: %d ppm",concen);	
-		OSMutexPost(&g_mutex_TDLAS,OS_OPT_POST_NONE,&err);
 
 		//ÔÚOLEDÉÏÏÔÊ¾
 		OSMutexPend(&g_mutex_oled,0,OS_OPT_PEND_BLOCKING,NULL,&err);	
@@ -905,8 +987,6 @@ void TDLAS_task(void *p_arg)
 		OSMutexPost(&g_mutex_oled,OS_OPT_NONE,&err);
 #endif
 
-	
-	
 		//ÑÓÊ±·¢ÉúÈÎÎñµ÷¶È
 		//delay_ms(1000);
 	}
@@ -967,9 +1047,10 @@ void MQ4_task(void *parg)
 	*******************************************/
 
 	//mq135×ª»»Öµ
-	float MQ135_ADC_ConvertedValue_Local;
+	int MQ135_ADC_ConvertedValue_Local;
 	int CH4_ppm;
 	int Voltage;
+	char MQ4[20] = {0};
 	
 	dgb_printf_safe("MQ4 task running\r\n");
 	
@@ -978,28 +1059,19 @@ void MQ4_task(void *parg)
 		//°ÑµçÆ½µÄÄ£ÄâĞÅºÅ×ª»»³ÉÊıÖµ  ¹«Ê½£º×ª»»ºó = ¸¡µãÊı ADCÖµ /4096 * 3.3
 		Voltage = MQ135_ADC_ConvertedValue/4096*3.3;
 		
-		//¿ÕÆøÖÊÁ¿¼ì²âÖµµÄ×ª»»¹«Ê½ ¹«Ê½£ºADCÊıÖµ * 3300 /4095
-		CH4_ppm = (Voltage - 0.5) / 0.1 * 200;
-		
-		
+//ÎŞÌìÈ»Æø»·¾³ÏÂ,Êµ²âAOUT¶ËµçÑ¹Îª1.29V,µ±¼ì²âµ½ÌìÈ»ÆøÊ±,Ã¿Éı¸ß0.1V,Êµ¼Ê±»²âÆøÌåÉı¸ß200ppm
+		CH4_ppm = (Voltage - 1.29) / 0.1 * 200;
+	
 		//×éºÏ´ÊÌõ
-		sprintf(MQ4,"CH4(MQ4): %2.3fppm ",CH4_ppm);
+		sprintf((char *)MQ4,"CH4:%2.3f ppm ",CH4_ppm);
 
-#if 0
-	 	//OLEDÏÔÊ¾Å¨¶È
+		sprintf((char *)node_1.CH4concentration,"%2.3f",CH4_ppm);
+		
+		//OLEDÏÔÊ¾Å¨¶È
 		OSMutexPend(&g_mutex_oled,0,OS_OPT_PEND_BLOCKING,NULL,&err);	
 		OLED_ShowString(0,4,(uint8_t *)MQ4,16);
 		OSMutexPost(&g_mutex_oled,OS_OPT_POST_NONE,&err);
-#endif
-		
-#if 0
-		//ÔÚLCDÉÏÏÔÊ¾
-		OSMutexPend(&g_mutex_lcd,0,OS_OPT_PEND_BLOCKING,NULL,&err);
-		LCD_ShowString(30,270,220,24,24,(u8 *)MQ4);
-		OSMutexPost(&g_mutex_lcd,OS_OPT_NONE,&err);	
-#endif		
-		
-		
+	
 		//ÑÓÊ±·¢ÉúÈÎÎñµ÷¶È
 		delay_ms(2000);
 	}
@@ -1014,25 +1086,118 @@ void IWG_task(void *parg)
 //ÈÎÎñ7 µÈ´ı¶à¸öÄÚºË¶ÔÏó ÏûÏ¢¶ÓÁĞ½ÓÊÕÊı¾İ ÒÔtxt¸ñÊ½´æÈëSD¿¨
 void SAVE_task(void *parg)
 {
+	OS_ERR err;
+	OS_FLAGS flags=0;
 	
+	FIL fnew;			//ÎÄ¼ş¶ÔÏó
+	u8 res=0;	 	//ÎÄ¼ş²Ù×÷½á¹û
+	u8 state=0;	 	//ÎÄ¼ş²Ù×÷½á¹û
+	UINT fwnum;			//ÎÄ¼ş³É¹¦¶ÁĞ´ÊıÁ¿
+	
+	u32 sd_size;
+	u32 total,free;
+	u8 *save_buf=0;
+	u8 t=0;	
+	
+	//¶Á»º³åÇø
+	u8 ReadBuffer[200] = {0};
+	//Ğ´»º³åÇø
+	u8 WriteBuffer[] = 
+	"NO.101 222 Air:0.123ppm CH4:5000ppm Temp:26.4¡æ Humi:45% 2020/11/17 16:53";
+	//ÎÄ¼şÃû
+	u8 bmp_name[] = "0:Fatfs.txt";
+
+	//dgb_printf_safe("SD card task running\r\n");	
+	//´®¿Ú´òÓ¡SD¿¨Ïà¹ØĞÅÏ¢
+	show_sdcard_info();	
+//	//ÏÔÊ¾SD¿¨ÈİÁ¿
+//	OSMutexPend(&g_mutex_lcd,0,OS_OPT_PEND_BLOCKING,NULL,&err);
+//	LCD_ShowString(30,10,200,16,16,(u8 *)"SD Card OK    ");
+//	LCD_ShowString(30,30,200,16,16,(u8 *)"SD Card Size:     MB");
+//	LCD_ShowNum(30+13*8,30,SDCardInfo.CardCapacity>>20,5,16);
+//	OSMutexPost(&g_mutex_lcd,OS_OPT_NONE,&err);	
+
+//	//dgb_printf_safe("\r\n¼´½«½øÈëÎÄ¼şÏµÍ³Ğ´²âÊÔ\r\n");
+//	//±È½ÏÎÄ¼şÃû¿´ÊÇ·ñ´æÔÚ
+//	
+//	state = f_open(&fnew, (const char *)bmp_name, FA_CREATE_ALWAYS|FA_WRITE|FA_READ);   // ´ò¿ªÎÄ¼ş
+//	if(state != FR_OK) // ´ò¿ªÊ§°Ü
+//	{
+//		//dgb_printf_safe("´ò¿ªÎÄ¼şÊ§°Ü\r\n");
+//		state = f_open(&fnew,(const char *)bmp_name, FA_CREATE_NEW|FA_WRITE|FA_READ);  // ´´½¨
+//		if(state != FR_OK) // ´´½¨Ê§°Ü
+//		{
+//			//dgb_printf_safe("´´½¨ÎÄ¼şÊ§°Ü\r\n");
+//			while(1)
+//			{
+//				LCD_ShowString(30,240,200,16,16,(u8 *)"create file fail");
+//				delay_ms(1000);
+//			}
+//		}
+//	}
+//	else{
+//		//dgb_printf_safe("´ò¿ª/´´½¨ÎÄ¼ş³É¹¦\r\n");
+//	}
+//	//ÎÄ¼ş¶¨Î»£¬¶¨Î»µ½ÎÄ¼şÄ©Î²
+//	state = f_lseek(&fnew,f_size(&fnew)-1);
+//	state = f_write(&fnew,WriteBuffer,sizeof(WriteBuffer),&fwnum);	
+//	if(state == FR_OK)
+//	{
+//		//dgb_printf_safe("ÏòÎÄ¼şĞ´ÈëÊı¾İÎª£º\r\n%s\r\n",WriteBuffer);
+//		//ÎÄ¼ş¶¨Î»£¬¶¨Î»µ½ÎÄ¼şÄ©Î²
+//		state = f_lseek(&fnew,f_size(&fnew)-1);
+//		if(state == FR_OK)
+//		{
+//			f_printf(&fnew,"\nÔÚÕâÀï¼ÓÒ»ĞĞ\n");
+//			state = f_lseek(&fnew,0);
+//			state = f_read(&fnew,ReadBuffer,f_size(&fnew),&fwnum);
+//			if(res == FR_OK)
+//			{
+//				//dgb_printf_safe("ÎÄ¼ş¶ÁÈ¡³É¹¦£¬¶Áµ½µÄ×Ö½ÚÊı¾İ£º%d\r\n",fwnum);
+//				//dgb_printf_safe("ÏòÎÄ¼ş¶ÁÈ¡µÄÊı¾İÎª£º\r\n%s\r\n",ReadBuffer);
+//				delay_ms(1000);
+//			}		
+//		}
+//		f_close(&fnew);
+//	}
+//	else{
+//		//dgb_printf_safe("!!ÎÄ¼şĞ´ÈëÊ§°Ü(%d)\r\n",res);
+//		delay_ms(1000);
+//	}
+
+	while(1)
+	{
+		//dgb_printf_safe("SAVE   SAVE   SAVE\r\n");
+		//ÑÓÊ±·¢ÉúÈÎÎñµ÷¶È
+		delay_ms(1000);
+	}	
 }
 
 
-//ÈÎÎñ8 LORA×ª·¢ µÈ´ı¶à¸öÄÚºË¶ÔÏó ÏûÏ¢¶ÓÁĞ½ÓÊÕÊı¾İ usart3 ·¢ËÍÖÁÉÏÎ»»ú
+//ÈÎÎñ8 LORA×ª·¢ µÈ´ı¶à¸öÄÚºË¶ÔÏó ÏûÏ¢¶ÓÁĞ½ÓÊÕÊı¾İ usart3 
+//ÕûÀíÊı¾İ·¢ËÍÖÁÉÏÎ»»ú
+void Send_Node(NODE *p,u8 len)     
+{
+    static u8 date,i;	   
+	for(i=0;i<len;i++)
+	{
+		date= *(((u8*) &p->device_id)+i);    
+		USART_SendData(USART3,date);   
+		while( USART_GetFlagStatus(USART3,USART_FLAG_TC)!= SET); 
+	}
+}
+
 void LORA_task(void *p_arg)
 {
 	OS_ERR err; 
 	//ÏûÏ¢¶ÓÁĞ½ÓÊÕ½á¹û
-	
-	char node_num_str[2] = {0};
-	int node_num_int = 0;
-	
+	int i=0;	
 	uint8_t *LORA_res=NULL;
 	OS_MSG_SIZE LORA_size;
+	char LORA[100] = {0};
 	
 	dgb_printf_safe("LORA task running\r\n");
-
-	int i=0;
+	
 	while(1)
 	{
 		
@@ -1050,7 +1215,7 @@ void LORA_task(void *p_arg)
 		}
 		
 		//Êı¾İ½ÓÊÕ
-		OSMutexPend(&g_mutex_LORA,0,OS_OPT_PEND_BLOCKING,NULL,&err);
+		
 		
 		if(USART3_RX_STA&0x8000)
 		{                                           
@@ -1060,35 +1225,96 @@ void LORA_task(void *p_arg)
 				LORA[i] = USART3_RX_BUF[i];
 			}
 			
-			dgb_printf_safe("LORA:%s\r\n",LORA);
-			
+			//¿½±´½á¹¹Ìå
+			memcpy(&node_temp,&USART3_RX_BUF,len);
 			//Ê¶±ğ½Úµã
-			node_num_str[0] =  LORA[4];
-			node_num_str[1] =  LORA[5];
-			node_num_int = atoi(node_num_str);
-			
-			
-			OSMutexPend(&g_mutex_lcd,0,OS_OPT_PEND_BLOCKING,NULL,&err);
-			if(node_num_int == 10)
-			{
-				LCD_ShowString(30,250,300,24,24,LORA);
+			//id 1~4 Îª¶¨µã¼ì²â½Úµã
+			OSMutexPend(&g_mutex_lcd,0,OS_OPT_PEND_BLOCKING,NULL,&err);		
+			if(!strncmp(node_temp.device_id,"1",1)){
+				memcpy(&node_1,&node_temp,len);
+				dgb_printf_safe("node_1  id:  %s\r\n",node_1.device_id);
+				dgb_printf_safe("node_1  humi:  %s\r\n",node_1.humidity);
+				dgb_printf_safe("node_1  temp:  %s\r\n",node_1.temperature);			
+				LCD_ShowString(30,250,108,24,24,"NODE ID: ");
+				LCD_ShowString(138,250,300,24,24,(char *)node_1.device_id);
+				LCD_ShowString(150+12,250,200,24,24,"TEMP:    C");
+				LCD_ShowString(210+12,250,300,24,24,(char *)node_1.temperature);
+				LCD_ShowString(270+24,250,200,24,24,"HUMI:    %");
+				LCD_ShowString(320+24,250,300,24,24,(char *)node_1.humidity);
+				LCD_ShowString(30,275,300,24,24,"CH4:      ppm");
+				LCD_ShowString(90,275,300,24,24,(char *)node_1.CH4concentration);
 			}
-			if(node_num_int == 15)
-			{
-				LCD_ShowString(30,280,300,24,24,LORA);
+			if(!strncmp(node_temp.device_id,"2",1)){
+				memcpy(&node_2,&node_temp,len);
+				dgb_printf_safe("node_2  id:  %s\r\n",node_2.device_id);
+				dgb_printf_safe("node_2  humi:  %s\r\n",node_2.humidity);
+				dgb_printf_safe("node_2  temp:  %s\r\n",node_2.temperature);			
+				LCD_ShowString(30,300,108,24,24,"NODE ID: ");
+				LCD_ShowString(138,300,300,24,24,(char *)node_2.device_id);
+				LCD_ShowString(150+12,300,200,24,24,"TEMP:    C");
+				LCD_ShowString(210+12,250+50,300,24,24,(char *)node_2.temperature);
+				LCD_ShowString(270+24,250+50,200,24,24,"HUMI:    %");
+				LCD_ShowString(320+24,250+50,300,24,24,(char *)node_2.humidity);
+				LCD_ShowString(30,275+50,300,24,24,"CH4:     ppm");
+				LCD_ShowString(90,275+50,300,24,24,(char *)node_2.CH4concentration);
+			}			
+			if(!strncmp(node_temp.device_id,"3",1)){
+				memcpy(&node_3,&node_temp,len);
+				dgb_printf_safe("node_3  id:  %s\r\n",node_3.device_id);
+				dgb_printf_safe("node_3  humi:  %s\r\n",node_3.humidity);
+				dgb_printf_safe("node_3  temp:  %s\r\n",node_3.temperature);			
+				LCD_ShowString(30,250+100,108,24,24,"NODE ID: ");
+				LCD_ShowString(138,250+100,300,24,24,(char *)node_3.device_id);
+				LCD_ShowString(150+12,250+100,200,24,24,"TEMP:    C");
+				LCD_ShowString(210+12,250+100,300,24,24,(char *)node_3.temperature);
+				LCD_ShowString(270+24,250+100,200,24,24,"HUMI:    %");
+				LCD_ShowString(320+24,250+100,300,24,24,(char *)node_3.humidity);
+				LCD_ShowString(30,275+100,300,24,24,"CH4:     ppm");
+				LCD_ShowString(90,275+100,300,24,24,(char *)node_3.CH4concentration);
+			}
+			if(!strncmp(node_temp.device_id,"4",1)){
+				memcpy(&node_4,&node_temp,len);
+				dgb_printf_safe("node_4  id:  %s\r\n",node_4.device_id);
+				dgb_printf_safe("node_4  humi:  %s\r\n",node_4.humidity);
+				dgb_printf_safe("node_4  temp:  %s\r\n",node_4.temperature);			
+				LCD_ShowString(30,250+150,108,24,24,"NODE ID: ");
+				LCD_ShowString(138,250+150,300,24,24,(char *)node_4.device_id);
+				LCD_ShowString(150+12,250+150,200,24,24,"TEMP:    C");
+				LCD_ShowString(210+12,250+150,300,24,24,(char *)node_4.temperature);
+				LCD_ShowString(270+24,250+150,200,24,24,"HUMI:    %");
+				LCD_ShowString(320+24,250+150,300,24,24,(char *)node_4.humidity);
+				LCD_ShowString(30,275+150,300,24,24,"CH4:     ppm");
+				LCD_ShowString(90,275+150,300,24,24,(char *)node_4.CH4concentration);
+			}
+			
+			//id == 5 ÎªÒ£²â½Úµã
+			if(!strncmp(node_temp.device_id,"5",1)){
+				memcpy(&node_5,&node_temp,len);
+				dgb_printf_safe("node_5  id:  %s\r\n",node_5.device_id);
+				dgb_printf_safe("node_5  humi:  %s\r\n",node_5.humidity);
+				dgb_printf_safe("node_5  temp:  %s\r\n",node_5.temperature);			
+				LCD_ShowString(30,250+200,108,24,24,"NODE ID: ");
+				LCD_ShowString(138,250+200,300,24,24,(char *)node_5.device_id);
+				LCD_ShowString(150+12,250+200,200,24,24,"TEMP:    C");
+				LCD_ShowString(210+12,250+200,300,24,24,(char *)node_5.temperature);
+				LCD_ShowString(270+24,250+200,200,24,24,"HUMI:    %");
+				LCD_ShowString(320+24,250+200,300,24,24,(char *)node_5.humidity);
+				LCD_ShowString(30,275+200,300,24,24,"LIGHT:   ");
+				LCD_ShowString(102,275+200,300,24,24,(char *)node_5.light);
+				LCD_ShowString(138,275+200,300,24,24,"CH4:     ppm");
+				LCD_ShowString(198,275+200,300,24,24,(char *)node_5.CH4concentration);				
+				LCD_ShowString(30,300+200,300,24,24,"PITCH:     C");
+				LCD_ShowString(30+72,300+200,300,24,24,(char *)node_5.Pitch);				
+				LCD_ShowString(30+144+12,300+200,300,24,24,"ROLL:     C");
+				LCD_ShowString(30+144+60+12,300+200,300,24,24,(char *)node_5.Roll);
+				LCD_ShowString(30+144+144+24,300+200,300,24,24,"YAW:     C");
+				LCD_ShowString(30+144+144+48+24,300+200,300,24,24,(char *)node_5.Yaw);				
 			}
 			OSMutexPost(&g_mutex_lcd,OS_OPT_NONE,&err);	
 			
 			USART3_RX_STA = 0;
-		}	
-		
-		OSMutexPost(&g_mutex_LORA,OS_OPT_NONE,&err);
-
-		
-		
-		
+		}			
 	}
-
 }
 	
 //ÈÎÎñ9 rtcÊ±¼äÏÔÊ¾	»¥³âËø oledÏÔÊ¾	
@@ -1101,7 +1327,7 @@ void RTC_task(void *parg)
 	
 	
 //OLEDÏÔÊ¾Ê±¼ä		
-#if 1		
+#if 0		
 	
 	while(1)
 	{
@@ -1148,12 +1374,12 @@ void RTC_task(void *parg)
 	
 	
 //LCDÏÔÊ¾Ê±¼ä		
-#if 0	
+#if 1	
 	//ÏÔÊ¾Ê±¼ä¿ò¿ò
 	POINT_COLOR=BLUE;
 	OSMutexPend(&g_mutex_lcd,0,OS_OPT_PEND_BLOCKING,NULL,&err);
-	LCD_ShowString(60,200,200,16,16,"    -  -  ");	   
-	LCD_ShowString(60,216,200,16,16,"  :  :  ");	
+	LCD_ShowString(360,20,200,16,16,"    -  -  ");	   
+	LCD_ShowString(360,40,200,16,16,"  :  :  ");	
 	OSMutexPost(&g_mutex_lcd,OS_OPT_NONE,&err);		
 	
 	while(1)
@@ -1162,36 +1388,36 @@ void RTC_task(void *parg)
 		{
 			t=calendar.sec;
 			OSMutexPend(&g_mutex_lcd,0,OS_OPT_PEND_BLOCKING,NULL,&err);
-			LCD_ShowNum(60,200,calendar.w_year,4,16);									  
-			LCD_ShowNum(100,200,calendar.w_month,2,16);									  
-			LCD_ShowNum(124,200,calendar.w_date,2,16);	 
+			LCD_ShowNum(360,20,calendar.w_year,4,16);									  
+			LCD_ShowNum(400,20,calendar.w_month,2,16);									  
+			LCD_ShowNum(424,20,calendar.w_date,2,16);	 
 			switch(calendar.week)
 			{
 				case 0:
-					LCD_ShowString(60,232,200,16,16,(u8 *)"Sunday   ");
+					LCD_ShowString(360,60,200,16,16,(u8 *)"Sunday   ");
 					break;
 				case 1:
-					LCD_ShowString(60,232,200,16,16,(u8 *)"Monday   ");
+					LCD_ShowString(360,60,200,16,16,(u8 *)"Monday   ");
 					break;
 				case 2:
-					LCD_ShowString(60,232,200,16,16,(u8 *)"Tuesday  ");
+					LCD_ShowString(360,60,200,16,16,(u8 *)"Tuesday  ");
 					break;
 				case 3:
-					LCD_ShowString(60,232,200,16,16,(u8 *)"Wednesday");
+					LCD_ShowString(360,60,200,16,16,(u8 *)"Wednesday");
 					break;
 				case 4:
-					LCD_ShowString(60,232,200,16,16,(u8 *)"Thursday ");
+					LCD_ShowString(360,60,200,16,16,(u8 *)"Thursday ");
 					break;
 				case 5:
-					LCD_ShowString(60,232,200,16,16,(u8 *)"Friday   ");
+					LCD_ShowString(360,60,200,16,16,(u8 *)"Friday   ");
 					break;
 				case 6:
-					LCD_ShowString(60,232,200,16,16,(u8 *)"Saturday ");
+					LCD_ShowString(360,60,200,16,16,(u8 *)"Saturday ");
 					break;  
 			}
-			LCD_ShowNum(60,216,calendar.hour,2,16);									  
-			LCD_ShowNum(84,216,calendar.min,2,16);									  
-			LCD_ShowNum(108,216,calendar.sec,2,16);
+			LCD_ShowNum(360,40,calendar.hour,2,16);									  
+			LCD_ShowNum(384,40,calendar.min,2,16);									  
+			LCD_ShowNum(408,40,calendar.sec,2,16);
 			OSMutexPost(&g_mutex_lcd,OS_OPT_NONE,&err);	
 		}	
 		delay_ms(1000);
@@ -1225,14 +1451,17 @@ void led1_task(void *p_arg)
 	int concen = 0;
 	while(1)
 	{
-		OSMutexPend(&g_mutex_TDLAS,0,OS_OPT_PEND_BLOCKING,NULL,&err);	
-		concen = atoi(TDLAS);
-		OSMutexPost(&g_mutex_TDLAS,OS_OPT_POST_NONE,&err);
+		OSMutexPend(&g_mutex_NODE,0,OS_OPT_PEND_BLOCKING,NULL,&err);	
+		concen = atoi(node_1.CH4concentration);
+		OSMutexPost(&g_mutex_NODE,OS_OPT_POST_NONE,&err);
 		
 		//dgb_printf_safe("concen: %d \r\n",concen);
-		if(concen > 400)
+		if(concen > 60)
 		{	
+			LED1 = 1;
+			delay_ms(1000);
 			LED1 = 0;	
+			delay_ms(2000);
 		}
 		else{
 			LED1 = 1;	
@@ -1256,20 +1485,22 @@ void BEEP_task(void *p_arg)
 
 	while(1)
 	{	
-		OSMutexPend(&g_mutex_TDLAS,0,OS_OPT_PEND_BLOCKING,NULL,&err);	
-		concen = atoi(TDLAS);
-		OSMutexPost(&g_mutex_TDLAS,OS_OPT_POST_NONE,&err);
+		OSMutexPend(&g_mutex_NODE,0,OS_OPT_PEND_BLOCKING,NULL,&err);	
+		concen = atoi(node_1.CH4concentration);
+		OSMutexPost(&g_mutex_NODE,OS_OPT_POST_NONE,&err);
 		
 		//dgb_printf_safe("concen: %d \r\n",concen);
-		if(concen > 400)
+		if(concen > 60)
 		{	
-			BEEP = 0;	
+			BEEP = 0;
+			delay_ms(1000);	
+			BEEP = 1;
+			delay_ms(1000);
 		}
 		else{
 			BEEP = 0;	
 		}
 		
-
 		delay_ms(1000);
 	}
 }
@@ -1522,3 +1753,60 @@ void float_task(void *p_arg)
 		
 	}
 }
+
+
+
+//ÈÎÎñ17 µÈ´ıÉÏÎ»»ú·¢ËÍÉÏ´«ÃüÁî£¬
+//ÂÖÑ¯×éÍø½ÚµãÉÏ´«ÖÁÉÏÎ»»ú
+void upload_task(void *p_arg)
+{
+	OS_ERR err; 
+	CPU_SR_ALLOC();
+
+	//ÏûÏ¢¶ÓÁĞ½ÓÊÕÉÏÎ»»úÇëÇó
+	uint8_t *check_res=NULL;
+	OS_MSG_SIZE CHECK_size;
+	char CHECK[20] = {0};
+	
+	while(1)
+	{
+		//µÈ´ıÏûÏ¢¶ÓÁĞ
+		check_res = OSQPend((OS_Q*			)&g_queue_usart1,
+							(OS_TICK		)0,
+							(OS_OPT			)OS_OPT_PEND_BLOCKING,
+							(OS_MSG_SIZE*	)&CHECK_size,
+							(CPU_TS*		)NULL,
+							(OS_ERR*		)&err);
+		
+		if(err != OS_ERR_NONE)
+		{
+			dgb_printf_safe("[TDLAS_task_usart2][OSQPend]Error Code = %d\r\n",err);		
+		}
+		
+		//½ÓÊÕÇëÇó
+		if(USART_RX_STA&0x8000)
+		{                                           
+			int len=USART_RX_STA&0x3FFF;//µÃµ½´Ë´Î½ÓÊÕÊı¾İµÄ³¤¶È
+			for(int i = 0;i < len;i++)
+			{
+				CHECK[i] = USART_RX_BUF[i];
+			}
+
+			//dgb_printf_safe("TDLAS:%s\r\n",USART2_RX_BUF);
+			//dgb_printf_safe("CHECK:%s\r\n",CHECK);
+			USART2_RX_STA = 0;
+		}
+
+		
+		if(!strncmp(CHECK,"check",5))
+		{
+			printf("11111");
+			json_test(&node_1);
+//			json_test(&node_2);
+//			json_test(&node_3);
+//			json_test(&node_4);
+			json_test_1(&node_5);
+		}
+	}
+}
+

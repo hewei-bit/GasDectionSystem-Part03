@@ -365,7 +365,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD,USE_STDPERIPH_DRIVER</Define>
               <Undefine></Undefine>
-              <IncludePath>..\USER;..\CORE;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\STM32F10x_FWLib\inc;..\FWLIB\STM32F10x_FWLib\inc;..\UCOSIII\uC-CPU;..\UCOSIII\uC-LIB;..\UCOSIII\uCOS-III;..\UCOSIII\UCOS_BSP;..\UCOSIII\uCOS_CONFIG;..\UCOSIII\uCOS-III\Source;..\UCOSIII\uC-CPU\ARM-Cortex-M3\RealView;..\UCOSIII\uC-LIB\Ports\ARM-Cortex-M3\RealView;..\UCOSIII\uCOS-III\Ports\ARM-Cortex-M3\Generic\RealView;..\LORA_1;..\CJSON;..\MALLOC;..\HARDWARE\LED;..\HARDWARE\USART2;..\HARDWARE\USART3;..\HARDWARE\USART4;..\HARDWARE\TIMER;..\HARDWARE\DHT11;..\HARDWARE\BEEP;..\HARDWARE\OLED;..\HARDWARE\KEY;..\HARDWARE\RTC;..\HARDWARE\MQ135;..\HARDWARE\MPU6050;..\HARDWARE\MPU6050\eMPL;..\HARDWARE\LCD</IncludePath>
+              <IncludePath>..\USER;..\CORE;..\SYSTEM\delay;..\SYSTEM\sys;..\SYSTEM\usart;..\STM32F10x_FWLib\inc;..\FWLIB\STM32F10x_FWLib\inc;..\UCOSIII\uC-CPU;..\UCOSIII\uC-LIB;..\UCOSIII\uCOS-III;..\UCOSIII\UCOS_BSP;..\UCOSIII\uCOS_CONFIG;..\UCOSIII\uCOS-III\Source;..\UCOSIII\uC-CPU\ARM-Cortex-M3\RealView;..\UCOSIII\uC-LIB\Ports\ARM-Cortex-M3\RealView;..\UCOSIII\uCOS-III\Ports\ARM-Cortex-M3\Generic\RealView;..\LORA_1;..\CJSON;..\MALLOC;..\HARDWARE\LED;..\HARDWARE\USART2;..\HARDWARE\USART3;..\HARDWARE\USART4;..\HARDWARE\TIMER;..\HARDWARE\DHT11;..\HARDWARE\BEEP;..\HARDWARE\OLED;..\HARDWARE\KEY;..\HARDWARE\RTC;..\HARDWARE\MQ135;..\HARDWARE\MPU6050;..\HARDWARE\MPU6050\eMPL;..\HARDWARE\LCD;..\HARDWARE\SDIO</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -512,6 +512,11 @@
               <FileName>lcd.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\HARDWARE\LCD\lcd.c</FilePath>
+            </File>
+            <File>
+              <FileName>sdio_sdcard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\HARDWARE\SDIO\sdio_sdcard.c</FilePath>
             </File>
           </Files>
         </Group>

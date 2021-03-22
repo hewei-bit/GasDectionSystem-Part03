@@ -1,36 +1,41 @@
 #include "fattester.h"	 
-#include "sdio_sdcard.h"
-
+#include "mmc_sd.h"
+#include "usmart.h"
 #include "usart.h"
-#include "exfuns.h"
-#include "malloc.h"		  
+#include "malloc.h"
+
 #include "ff.h"
-#include "string.h"
-//////////////////////////////////////////////////////////////////////////////////	 
-//本程序只供学习使用，未经作者许可，不得用于其它任何用途
-//ALIENTEK战舰STM32开发板V3
-//FATFS 测试代码	   
-//正点原子@ALIENTEK
-//技术论坛:www.openedv.com
-//创建日期:2015/1/20
-//版本：V1.0
-//版权所有，盗版必究。
-//Copyright(C) 广州市星翼电子科技有限公司 2014-2024
-//All rights reserved									  
-////////////////////////////////////////////////////////////////////////////////// 	
-    
-//为磁盘注册工作区	 
-//path:磁盘路径，比如"0:"、"1:"
-//mt:0，不立即注册（稍后注册）；1，立即注册
-//返回值:执行结果
-u8 mf_mount(u8* path,u8 mt)
+
+FATFS *fs[2];  // Work area (file system object) for logical drive	 
+FIL *file;
+FIL *ftemp;	 
+
+UINT br,bw;
+FILINFO fileinfo;
+DIR dir;
+
+
+u8 *fatbuf;//SD卡数据缓存区
+
+u8 test_init(void)
+{
+	fs[0]=(FATFS*)mymalloc(SRAMIN,sizeof(FATFS));	//为磁盘0工作区申请内存	
+	fs[1]=(FATFS*)mymalloc(SRAMIN,sizeof(FATFS));	//为磁盘1工作区申请内存
+	file=(FIL*)mymalloc(SRAMIN,sizeof(FIL));		//为file申请内存
+	ftemp=(FIL*)mymalloc(SRAMIN,sizeof(FIL));		//为ftemp申请内存
+	fatbuf=(u8*)mymalloc(SRAMIN,512);				//为fatbuf申请内存
+	if(fs[0]&&fs[1]&&file&&ftemp&&fatbuf)return 0;  //申请有一个失败,即失败.
+	else return 1;	
+}
+
+
+
+//挂载磁盘	   
+u8 mf_mount(u8 drv)
 {		   
-	return f_mount(fs[1],(const TCHAR*)path,mt); 
+	return f_mount(drv,fs[drv]); 
 }
 //打开路径下的文件
-//path:路径+文件名
-//mode:打开模式
-//返回值:执行结果
 u8 mf_open(u8*path,u8 mode)
 {
 	u8 res;	 
@@ -38,15 +43,11 @@ u8 mf_open(u8*path,u8 mode)
 	return res;
 } 
 //关闭文件
-//返回值:执行结果
 u8 mf_close(void)
 {
 	f_close(file);
 	return 0;
 }
-//读出数据
-//len:读出的长度
-//返回值:执行结果
 u8 mf_read(u16 len)
 {
 	u16 i,t;
@@ -71,26 +72,23 @@ u8 mf_read(u16 len)
 		res=f_read(file,fatbuf,len%512,&br);
 		if(res)	//读数据出错了
 		{
-			printf("\r\nRead Error:%d\r\n",res);   
+			printf("Read Error:%d\r\n",res);   
 		}else
 		{
 			tlen+=br;
 			for(t=0;t<br;t++)printf("%c",fatbuf[t]); 
 		}	 
 	}
-	if(tlen)printf("\r\nReaded data len:%d\r\n",tlen);//读到的数据长度
+	if(tlen)printf("Readed data len:%d\r\n",tlen);//读到的数据长度
 	printf("Read data over\r\n");	 
 	return res;
 }
 //写入数据
-//dat:数据缓存区
-//len:写入长度
-//返回值:执行结果
 u8 mf_write(u8*dat,u16 len)
 {			    
 	u8 res;	   					   
 
-	printf("\r\nBegin Write file...\r\n");
+	printf("\r\nWriting file data.\r\n");
 	printf("Write data len:%d\r\n",len);	 
 	res=f_write(file,dat,len,&bw);
 	if(res)
@@ -101,21 +99,12 @@ u8 mf_write(u8*dat,u16 len)
 	return res;
 }
 
-//打开目录
- //path:路径
-//返回值:执行结果
+//打开文件夹
 u8 mf_opendir(u8* path)
 {
 	return f_opendir(&dir,(const TCHAR*)path);	
 }
-//关闭目录 
-//返回值:执行结果
-u8 mf_closedir(void)
-{
-	return f_closedir(&dir);	
-}
 //打读取文件夹
-//返回值:执行结果
 u8 mf_readdir(void)
 {
 	u8 res;
@@ -155,8 +144,6 @@ u8 mf_readdir(void)
 }			 
 
  //遍历文件
- //path:路径
- //返回值:执行结果
 u8 mf_scan_files(u8 * path)
 {
 	FRESULT res;	  
@@ -187,16 +174,16 @@ u8 mf_scan_files(u8 * path)
 	myfree(SRAMIN,fileinfo.lfname);
     return res;	  
 }
+ 
+ 
 //显示剩余容量
-//drv:盘符
-//返回值:剩余容量(字节)
 u32 mf_showfree(u8 *drv)
 {
 	FATFS *fs1;
 	u8 res;
     u32 fre_clust=0, fre_sect=0, tot_sect=0;
     //得到磁盘信息及空闲簇数量
-    res = f_getfree((const TCHAR*)drv,(DWORD*)&fre_clust, &fs1);
+    res = f_getfree((const TCHAR*)drv, &fre_clust, &fs1);
     if(res==0)
 	{											   
 	    tot_sect = (fs1->n_fatent - 2) * fs1->csize;//得到总扇区数
@@ -222,7 +209,7 @@ u32 mf_showfree(u8 *drv)
 	return fre_sect;
 }		    
 //文件读写指针偏移
-//offset:相对首地址的偏移量
+//offset:首地址偏移的量
 //返回值:执行结果.
 u8 mf_lseek(u32 offset)
 {
@@ -241,65 +228,29 @@ u32 mf_size(void)
 	return f_size(file);
 } 
 //创建目录
-//pname:目录路径+名字
-//返回值:执行结果
-u8 mf_mkdir(u8*pname)
+u8 mf_mkdir(u8*name)
 {
-	return f_mkdir((const TCHAR *)pname);
+	return f_mkdir((const TCHAR *)name);
 }
 //格式化
-//path:磁盘路径，比如"0:"、"1:"
-//mode:模式
-//au:簇大小
-//返回值:执行结果
-u8 mf_fmkfs(u8* path,u8 mode,u16 au)
+u8 mf_fmkfs(u8 drv,u8 mode,u16 au)
 {
-	return f_mkfs((const TCHAR*)path,mode,au);//格式化,drv:盘符;mode:模式;au:簇大小
+	return f_mkfs(drv,mode,au);//格式化,drv:盘符;mode:模式;au:簇大小
 } 
 //删除文件/目录
-//pname:文件/目录路径+名字
-//返回值:执行结果
-u8 mf_unlink(u8 *pname)
+u8 mf_unlink(u8 *name)
 {
-	return  f_unlink((const TCHAR *)pname);
+	return  f_unlink((const TCHAR *)name);
 }
-
 //修改文件/目录名字(如果目录不同,还可以移动文件哦!)
 //oldname:之前的名字
 //newname:新名字
-//返回值:执行结果
 u8 mf_rename(u8 *oldname,u8* newname)
 {
 	return  f_rename((const TCHAR *)oldname,(const TCHAR *)newname);
 }
-//获取盘符（磁盘名字）
-//path:磁盘路径，比如"0:"、"1:"  
-void mf_getlabel(u8 *path)
-{
-	u8 buf[20];
-	u32 sn=0;
-	u8 res;
-	res=f_getlabel ((const TCHAR *)path,(TCHAR *)buf,(DWORD*)&sn);
-	if(res==FR_OK)
-	{
-		printf("\r\n磁盘%s 的盘符为:%s\r\n",path,buf);
-		printf("磁盘%s 的序列号:%X\r\n\r\n",path,sn); 
-	}else printf("\r\n获取失败，错误码:%X\r\n",res);
-}
-//设置盘符（磁盘名字），最长11个字符！！，支持数字和大写字母组合以及汉字等
-//path:磁盘号+名字，比如"0:ALIENTEK"、"1:OPENEDV"  
-void mf_setlabel(u8 *path)
-{
-	u8 res;
-	res=f_setlabel ((const TCHAR *)path);
-	if(res==FR_OK)
-	{
-		printf("\r\n磁盘盘符设置成功:%s\r\n",path);
-	}else printf("\r\n磁盘盘符设置失败，错误码:%X\r\n",res);
-} 
 
 //从文件里面读取一段字符串
-//size:要读取的长度
 void mf_gets(u16 size)
 {
  	TCHAR* rbuf;
@@ -312,23 +263,31 @@ void mf_gets(u16 size)
 }
 //需要_USE_STRFUNC>=1
 //写一个字符到文件
-//c:要写入的字符
-//返回值:执行结果
 u8 mf_putc(u8 c)
 {
 	return f_putc((TCHAR)c,file);
 }
 //写字符串到文件
-//c:要写入的字符串
-//返回值:写入的字符串长度
 u8 mf_puts(u8*c)
 {
 	return f_puts((TCHAR*)c,file);
 }
-
-
-
-
+//文件复制信息提示
+//mode:
+//[0]:更新文件名
+//[1]:更新百分比pct
+//[2]:更新文件夹
+//[3~7]:保留
+//返回值:0,正常;
+//       1,结束复制
+u8 mf_cpymsg(u8*pname,u8 pct,u8 mode)
+{
+	if(mode&0X01)printf("\r\nCopy File:%s\r\n",pname);
+	if(mode&0X02)printf("File Copyed:%d\r\n",pct);
+	if(mode&0X04)printf("Copy Folder:%s\r\n",pname);
+	return 0;	
+}
+		  
 
 
 
